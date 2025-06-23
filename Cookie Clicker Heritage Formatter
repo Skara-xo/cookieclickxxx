@@ -1,0 +1,115 @@
+// ==UserScript==
+// @name         Cookie Clicker Heritage Formatter x20 Units
+// @namespace    http://tampermonkey.net/
+// @version      3.0
+// @description  Affiche héritage formaté avec unités jusqu'à x20, petit et gris
+// @author       GPT
+// @match        https://orteil.dashnet.org/cookieclicker/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    const units = [
+      "",
+      "k",
+      "million",
+      "milliard",
+      "billion",
+      "quadrillion",
+      "quintillion",
+      "sextillion",
+      "septillion",
+      "octillion",
+      "nonillion",
+      "décillion",
+      "undécillion",
+      "duodécillion",
+      "trédécillion",
+      "quattuordécillion",
+      "quindécillion",
+      "sexdécillion",
+      "septendécillion",
+      "octodécillion",
+      "novemdécillion"
+    ];
+
+    function formatBigNumber(n) {
+        if (n < 1e3) return n.toString();
+        let unitIndex = 0;
+        let num = n;
+        while (num >= 1000 && unitIndex < units.length - 1) {
+            num /= 1000;
+            unitIndex++;
+        }
+        return num.toFixed(3) + " " + units[unitIndex];
+    }
+
+    function parseHeritageText(text) {
+        const numStr = text.replace(/[+,]/g, '');
+        const num = Number(numStr);
+        return isNaN(num) ? null : num;
+    }
+
+    function createOrGetFormattedDiv(parent) {
+        let div = document.getElementById('formattedHeritageValue');
+        if (!div) {
+            div = document.createElement('div');
+            div.id = 'formattedHeritageValue';
+
+            div.style.position = 'absolute';
+            div.style.top = '15px';
+            div.style.left = '-80px';
+            div.style.fontSize = '11px';
+            div.style.color = '#aaa';
+            div.style.fontWeight = 'normal';
+            div.style.pointerEvents = 'none';
+            div.style.whiteSpace = 'nowrap';
+            div.style.textShadow = 'none';
+
+            if (getComputedStyle(parent).position === 'static') {
+                parent.style.position = 'relative';
+            }
+
+            parent.appendChild(div);
+        }
+        return div;
+    }
+
+    function updateFormattedValue() {
+        const ascendNumber = document.getElementById('ascendNumber');
+        if (!ascendNumber) return;
+
+        const parent = ascendNumber.parentElement;
+        if (!parent) return;
+
+        const divFormatted = createOrGetFormattedDiv(parent);
+
+        const heritageNum = parseHeritageText(ascendNumber.textContent);
+        if (heritageNum === null) {
+            divFormatted.textContent = "Erreur de parsing";
+            return;
+        }
+
+        divFormatted.textContent = `(${formatBigNumber(heritageNum)})`;
+    }
+
+    const observer = new MutationObserver((mutations, obs) => {
+        const ascendNumber = document.getElementById('ascendNumber');
+        if (ascendNumber) {
+            updateFormattedValue();
+
+            const textObserver = new MutationObserver(() => {
+                updateFormattedValue();
+            });
+            textObserver.observe(ascendNumber, { characterData: true, subtree: true, childList: true });
+
+            obs.disconnect();
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    setInterval(updateFormattedValue, 1000);
+})();
